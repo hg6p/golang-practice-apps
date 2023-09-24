@@ -4,52 +4,32 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+
+	"path/filepath"
 	"urlshort"
-
-	"gopkg.in/yaml.v3"
 )
-
-type T struct {
-	Path string `yaml:"path"`
-	URL  string `yaml:"url"`
-}
 
 func main() {
 	mux := defaultMux()
+
 	// Build the MapHandler using the mux as the fallback
 	pathsToUrls := map[string]string{
 		"/urlshort-godoc": "https://godoc.org/github.com/gophercises/urlshort",
 		"/yaml-godoc":     "https://godoc.org/gopkg.in/yaml.v2",
 	}
 	mapHandler := urlshort.MapHandler(pathsToUrls, mux)
+	yamlFilePath := filepath.Join("..", "urlshort.yaml")
 
-	// Build the YAMLHandler using the mapHandler as the
-	// fallback
-	data := `
-- path: /urlshort
-  url: https://github.com/gophercises/urlshort
-- path: /urlshort-final
-  url: https://github.com/gophercises/urlshort/tree/solution
-`
-	t := []T{}
-	err := yaml.Unmarshal([]byte(data), &t)
-	if err != nil {
-		log.Fatalf("error: %v", err)
-	}
-	fmt.Printf("--- t:\n%v\n\n", t)
+	yamlData := urlshort.CreateMap(urlshort.ParseYaml(yamlFilePath))
+	// Build the YAMLHandler using the mapHandler as the fallback
+	yamlHandler, err := urlshort.YAMLHandler(yamlData, mapHandler)
 
-	d, err := yaml.Marshal(&t)
 	if err != nil {
-		log.Fatalf("error: %v", err)
+		log.Fatalf("error creating YAML handler: %v", err)
 	}
-	fmt.Printf("--- t dump:\n%s\n\n", string(d))
-	fmt.Println(t[0].Path)
-	/* 	yamlHandler, err := urlshort.YAMLHandler([]byte(yaml), mapHandler)
-	   	if err != nil {
-	   		panic(err)
-	   	} */
+
 	fmt.Println("Starting the server on :8080")
-	http.ListenAndServe(":8080", mapHandler)
+	http.ListenAndServe(":8080", yamlHandler)
 }
 
 func defaultMux() *http.ServeMux {

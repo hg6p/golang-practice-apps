@@ -2,7 +2,11 @@ package urlshort
 
 import (
 	"fmt"
+	"log"
 	"net/http"
+	"os"
+
+	"gopkg.in/yaml.v2"
 )
 
 // MapHandler will return an http.HandlerFunc (which also
@@ -17,7 +21,7 @@ func MapHandler(pathsToUrls map[string]string, fallback http.Handler) http.Handl
 		if path, ok := pathsToUrls[r.URL.Path]; ok {
 			http.Redirect(w, r, path, http.StatusFound)
 		}
-		fmt.Println("fallvak", fallback)
+
 		fallback.ServeHTTP(w, r)
 	}
 
@@ -39,7 +43,45 @@ func MapHandler(pathsToUrls map[string]string, fallback http.Handler) http.Handl
 //
 // See MapHandler to create a similar http.HandlerFunc via
 // a mapping of paths to urls.
-func YAMLHandler(yml []byte, fallback http.Handler) (http.HandlerFunc, error) {
-	// TODO: Implement this...
-	return nil, nil
+func YAMLHandler(yml map[string]string, fallback http.Handler) (http.HandlerFunc, error) {
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		if path, ok := yml[r.URL.Path]; ok {
+			http.Redirect(w, r, path, http.StatusFound)
+		}
+
+		fallback.ServeHTTP(w, r)
+	}, nil
+}
+
+type T struct {
+	Path string `yaml:"path"`
+	URL  string `yaml:"url"`
+}
+
+func ParseYaml(pathToFile string) []T {
+
+	// Read YAML data from a file
+	yamlData, errRf := os.ReadFile(pathToFile)
+	if errRf != nil {
+		log.Fatalf("error reading YAML file: %v", errRf)
+	}
+	t := []T{}
+	err := yaml.Unmarshal([]byte(yamlData), &t)
+	if err != nil {
+		log.Fatalf("error: %v", err)
+	}
+	fmt.Printf("--- t:\n%v\n\n", t)
+
+	return t
+
+}
+
+func CreateMap(yamlData []T) map[string]string {
+	yamlMap := make(map[string]string)
+	for _, item := range yamlData {
+		yamlMap[item.Path] = item.URL
+	}
+
+	return yamlMap
 }
