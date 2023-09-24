@@ -1,16 +1,19 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"log"
 	"net/http"
 
-	"path/filepath"
 	"urlshort"
 )
 
 func main() {
 	mux := defaultMux()
+	flagFilePath := flag.String("yaml", "urlshort.yaml", "Path to the YAML file")
+	flag.Parse()
+	println(*flagFilePath)
 
 	// Build the MapHandler using the mux as the fallback
 	pathsToUrls := map[string]string{
@@ -18,9 +21,7 @@ func main() {
 		"/yaml-godoc":     "https://godoc.org/gopkg.in/yaml.v2",
 	}
 	mapHandler := urlshort.MapHandler(pathsToUrls, mux)
-	yamlFilePath := filepath.Join("..", "urlshort.yaml")
-
-	yamlData := urlshort.CreateMap(urlshort.ParseYaml(yamlFilePath))
+	yamlData := urlshort.CreateMap(urlshort.ParseYaml(*flagFilePath))
 	// Build the YAMLHandler using the mapHandler as the fallback
 	yamlHandler, err := urlshort.YAMLHandler(yamlData, mapHandler)
 

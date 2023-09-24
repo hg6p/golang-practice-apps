@@ -1,0 +1,4 @@
+- path: /yt
+  url: https://youtube.com/
+- path: /google
+  url: https://google.com/
