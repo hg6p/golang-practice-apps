@@ -5,25 +5,36 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-
 	"urlshort"
+	myTypes "urlshort/types"
 )
 
 func main() {
 	mux := defaultMux()
-	flagFilePath := flag.String("yaml", "urlshort.yaml", "Path to the YAML file")
+	jsonFilePath := flag.String("json", "", "Path to the JSON file")
+	flagFilePath := flag.String("yaml", "../urlshort.yaml", "Path to the YAML file")
 	flag.Parse()
-	println(*flagFilePath)
+	var data map[string]myTypes.T
+	if *jsonFilePath != "" {
 
+		data = urlshort.ParseJson(*jsonFilePath)
+		// Use the YAML configuration as needed
+		fmt.Printf("JSON Config: %+v\n", data)
+	} else {
+		data = urlshort.CreateMap(urlshort.ParseYaml(*flagFilePath))
+
+		// Use the JSON configuration as needed
+		fmt.Printf("YAML Config: %+v\n", data)
+	}
 	// Build the MapHandler using the mux as the fallback
 	pathsToUrls := map[string]string{
 		"/urlshort-godoc": "https://godoc.org/github.com/gophercises/urlshort",
 		"/yaml-godoc":     "https://godoc.org/gopkg.in/yaml.v2",
 	}
 	mapHandler := urlshort.MapHandler(pathsToUrls, mux)
-	yamlData := urlshort.CreateMap(urlshort.ParseYaml(*flagFilePath))
+
 	// Build the YAMLHandler using the mapHandler as the fallback
-	yamlHandler, err := urlshort.YAMLHandler(yamlData, mapHandler)
+	yamlHandler, err := urlshort.YAMLHandler(data, mapHandler)
 
 	if err != nil {
 		log.Fatalf("error creating YAML handler: %v", err)

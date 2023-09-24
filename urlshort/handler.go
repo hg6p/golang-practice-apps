@@ -1,8 +1,11 @@
 package urlshort
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
+	myTypes "urlshort/types"
+
 	"net/http"
 	"os"
 
@@ -43,30 +46,25 @@ func MapHandler(pathsToUrls map[string]string, fallback http.Handler) http.Handl
 //
 // See MapHandler to create a similar http.HandlerFunc via
 // a mapping of paths to urls.
-func YAMLHandler(yml map[string]string, fallback http.Handler) (http.HandlerFunc, error) {
+func YAMLHandler(yml map[string]myTypes.T, fallback http.Handler) (http.HandlerFunc, error) {
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		if path, ok := yml[r.URL.Path]; ok {
-			http.Redirect(w, r, path, http.StatusFound)
+			http.Redirect(w, r, path.URL, http.StatusFound)
 		}
 
 		fallback.ServeHTTP(w, r)
 	}, nil
 }
 
-type T struct {
-	Path string `yaml:"path"`
-	URL  string `yaml:"url"`
-}
-
-func ParseYaml(pathToFile string) []T {
+func ParseYaml(pathToFile string) []myTypes.T {
 
 	// Read YAML data from a file
 	yamlData, errRf := os.ReadFile(pathToFile)
 	if errRf != nil {
 		log.Fatalf("error reading YAML file: %v", errRf)
 	}
-	t := []T{}
+	t := []myTypes.T{}
 	err := yaml.Unmarshal([]byte(yamlData), &t)
 	if err != nil {
 		log.Fatalf("error: %v", err)
@@ -77,11 +75,27 @@ func ParseYaml(pathToFile string) []T {
 
 }
 
-func CreateMap(yamlData []T) map[string]string {
-	yamlMap := make(map[string]string)
+func CreateMap(yamlData []myTypes.T) map[string]myTypes.T {
+	yamlMap := make(map[string]myTypes.T)
 	for _, item := range yamlData {
-		yamlMap[item.Path] = item.URL
+		yamlMap[item.Path] = item
 	}
 
 	return yamlMap
+}
+
+func ParseJson(pathToFile string) map[string]myTypes.T {
+	jsonData, errRf := os.ReadFile(pathToFile)
+	if errRf != nil {
+		log.Fatalf("error reading YAML file: %v", errRf)
+	}
+
+	pathInfoMap := make(map[string]myTypes.T)
+	err := json.Unmarshal(jsonData, &pathInfoMap)
+	if err != nil {
+		log.Fatalf("error reading YAML file: %v", errRf)
+	}
+
+	return pathInfoMap
+
 }
