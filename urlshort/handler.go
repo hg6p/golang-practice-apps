@@ -1,9 +1,11 @@
 package urlshort
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"log"
+	"urlshort/database"
 	myTypes "urlshort/types"
 
 	"net/http"
@@ -98,4 +100,16 @@ func ParseJson(pathToFile string) map[string]myTypes.T {
 
 	return pathInfoMap
 
+}
+
+func DataBaseHandler(db *sql.DB, fallback http.Handler) (http.HandlerFunc, error) {
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		if path, ok := database.GetUrls(db, r.URL.Path); ok == nil {
+			fmt.Println(path)
+			http.Redirect(w, r, path, http.StatusFound)
+		}
+
+		fallback.ServeHTTP(w, r)
+	}, nil
 }

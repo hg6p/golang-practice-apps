@@ -1,47 +1,30 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"log"
 	"net/http"
 	"urlshort"
-	myTypes "urlshort/types"
+	"urlshort/database"
 )
 
 func main() {
+
 	mux := defaultMux()
-	jsonFilePath := flag.String("json", "", "Path to the JSON file")
-	flagFilePath := flag.String("yaml", "../urlshort.yaml", "Path to the YAML file")
-	flag.Parse()
-	var data map[string]myTypes.T
-	if *jsonFilePath != "" {
+	db := database.OnInit()
 
-		data = urlshort.ParseJson(*jsonFilePath)
-		// Use the YAML configuration as needed
-		fmt.Printf("JSON Config: %+v\n", data)
-	} else {
-		data = urlshort.CreateMap(urlshort.ParseYaml(*flagFilePath))
-
-		// Use the JSON configuration as needed
-		fmt.Printf("YAML Config: %+v\n", data)
-	}
-	// Build the MapHandler using the mux as the fallback
 	pathsToUrls := map[string]string{
 		"/urlshort-godoc": "https://godoc.org/github.com/gophercises/urlshort",
 		"/yaml-godoc":     "https://godoc.org/gopkg.in/yaml.v2",
 	}
 	mapHandler := urlshort.MapHandler(pathsToUrls, mux)
 
-	// Build the YAMLHandler using the mapHandler as the fallback
-	yamlHandler, err := urlshort.YAMLHandler(data, mapHandler)
-
+	dbHandler, err := urlshort.DataBaseHandler(db, mapHandler)
 	if err != nil {
-		log.Fatalf("error creating YAML handler: %v", err)
+		log.Fatalf("error creating database handler %v", err)
 	}
-
 	fmt.Println("Starting the server on :8080")
-	http.ListenAndServe(":8080", yamlHandler)
+	http.ListenAndServe(":8080", dbHandler)
 }
 
 func defaultMux() *http.ServeMux {
